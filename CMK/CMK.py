@@ -20,13 +20,11 @@ def load_data(args):
     gt = data["y"].squeeze()
     num_class = np.unique(gt).shape[0]
     feat_dims = [
-        torch.tensor(X.astype(np.float32).T, dtype=torch.float32)
-        .to(args.device)
-        .shape[1]
+        torch.tensor(X.astype(np.float32), dtype=torch.float32).to(args.device).shape[1]
         for X in Xs
     ]
     Xs = [
-        torch.tensor(X.astype(np.float32).T, dtype=torch.float32).to(args.device)
+        torch.tensor(X.astype(np.float32), dtype=torch.float32).to(args.device)
         for X in Xs
     ]
     return Xs, gt, num_class, feat_dims
@@ -55,7 +53,7 @@ def cluster_metric(y_true, y_pred):
 
 
 class FCNet(nn.Module):
-    def __init__(self, feat_dims=[100,100], latent_dim=64, normalize=True):
+    def __init__(self, feat_dims=[100, 100], latent_dim=64, normalize=True):
         super(FCNet, self).__init__()
         self.feat_dims = feat_dims
         self.num_view = len(feat_dims)
@@ -159,12 +157,15 @@ class ConLoss(nn.Module):
                 i * num_smp : (i + 1) * num_smp, i * num_smp : (i + 1) * num_smp
             ]
         kernel = kernels.mean(2)
-        val, vec = torch.eig(kernel.detach(), eigenvectors=True)
-        _, ind = torch.sort(val[:, 0], descending=True)
-        H = vec[:, ind[: self.num_class]]
+        # val, vec = torch.eig(kernel.detach(), eigenvectors=True)
+        val, vec = torch.linalg.eig(kernel.detach())
+        val_real = val.real
+        vec_real = vec.real
+        _, ind = torch.sort(val_real, descending=True)
+        H = vec_real[ind[: self.num_class]]
 
         loss_extra = (
-            torch.trace(kernel) - torch.trace(torch.chain_matmul(H.T, kernel, H))
+            torch.trace(kernel) - torch.trace(torch.chain_matmul(H, kernel, H.T))
         ) / num_smp
         H = F.normalize(H).detach().cpu().numpy()
 
@@ -278,7 +279,7 @@ def main(args):
         )
         time_epochs.append(time.time() - time1 - time_extra - time_extra_2)
 
-        kmeans = KMeans(n_clusters=num_class).fit(H)
+        kmeans = KMeans(n_clusters=num_class).fit(H.T)
         acc, nmi, pur = cluster_metric(gt, kmeans.labels_)
         accs.append(acc)
         nmis.append(nmi)
