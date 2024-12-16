@@ -18,6 +18,7 @@ def accuracy_score(y_true, y_pred):
 
     # Find optimal one-to-one mapping between cluster labels and true labels
     from scipy.optimize import linear_sum_assignment
+
     row_ind, col_ind = linear_sum_assignment(-contingency_matrix)
 
     # Return cluster accuracy

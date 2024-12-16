@@ -8,15 +8,15 @@ from utils.score import cluster_metric
 
 
 def train(
-        data_loader,
-        model,
-        criterion,
-        optimizer,
-        epoch,
-        kernel_func,
-        num_class,
-        args,
-        **params
+    data_loader,
+    model,
+    criterion,
+    optimizer,
+    epoch,
+    kernel_func,
+    num_class,
+    args,
+    **params
 ):
     device = torch.device(args.device)
     loss_con = 0
@@ -32,7 +32,9 @@ def train(
         num_view = len(feature)
         num_smp = len(feature[0])
         num_ins = num_view * num_smp
-        feature, label = [feature[i].to(device) for i in range(num_view)], label.to(device)
+        feature, label = [feature[i].to(device) for i in range(num_view)], label.to(
+            device
+        )
         proj_feature = model(feature)
         pos_mask = torch.eye(num_smp, device=device)
         pos_mask = pos_mask.repeat(num_view, num_view)
@@ -44,8 +46,20 @@ def train(
         identity_matrix = torch.as_tensor(label_vec == label_vec.T, device=device)
         true_neg_mask = torch.where(identity_matrix, 0, 1)
         false_neg_mask = neg_mask - true_neg_mask
-        loss_con_batch, pos_avg_batch, neg_avg_batch, true_neg_avg_batch, false_neg_avg_batch \
-            = criterion(proj_feature, pos_mask, neg_mask, true_neg_mask, false_neg_mask, m=args.margin)
+        (
+            loss_con_batch,
+            pos_avg_batch,
+            neg_avg_batch,
+            true_neg_avg_batch,
+            false_neg_avg_batch,
+        ) = criterion(
+            proj_feature,
+            pos_mask,
+            neg_mask,
+            true_neg_mask,
+            false_neg_mask,
+            m=args.margin,
+        )
 
         loss_con += loss_con_batch.item()  # 总的损失
         pos_avg += (pos_avg_batch - pos_avg) / (batch_idx + 1)
@@ -63,7 +77,9 @@ def train(
         H = torch.real(vec[:, ind[:num_class]])
 
         # loss of extra downstream task
-        loss_clu_batch = (torch.trace(kernel) - torch.trace(torch.linalg.multi_dot([H.T, kernel, H]))) / num_smp
+        loss_clu_batch = (
+            torch.trace(kernel) - torch.trace(torch.linalg.multi_dot([H.T, kernel, H]))
+        ) / num_smp
 
         # get normalized H for later validation
         H = F.normalize(H).detach().cpu().numpy()
@@ -89,4 +105,14 @@ def train(
         pur += (pur_bt - pur) * rate / (batch_idx + rate)
     if epoch == 0:
         args.margin = (pos_avg + neg_avg) / 2 * args.margin_rate
-    return loss_con, loss_clu, pos_avg, neg_avg, true_neg_avg, false_neg_avg, acc, nmi, pur
+    return (
+        loss_con,
+        loss_clu,
+        pos_avg,
+        neg_avg,
+        true_neg_avg,
+        false_neg_avg,
+        acc,
+        nmi,
+        pur,
+    )

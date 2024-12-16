@@ -15,6 +15,7 @@ class metrics:
         for i in range(labels_pred.size):
             w[labels_pred[i], labels_true[i]] += 1
         from scipy.optimize import linear_sum_assignment
+
         ind = linear_sum_assignment(w.max() - w)
         ind = np.asarray(ind)
         ind = np.transpose(ind)

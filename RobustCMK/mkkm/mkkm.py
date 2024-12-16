@@ -37,7 +37,9 @@ def mkkm(mkdata, k, theta=None, fix_theta=True, eps=1e-6, max_iter=250):
             # 计算系数
             coef = torch.zeros((num_view,), device=mkdata.device)
             for i in range(num_view):
-                coef[i] = torch.trace(mkdata[:, :, i]) - torch.trace(H.T @ mkdata[:, :, i] @ H)
+                coef[i] = torch.trace(mkdata[:, :, i]) - torch.trace(
+                    H.T @ mkdata[:, :, i] @ H
+                )
             theta_new = 1 / coef
             theta_new = theta_new / torch.sum(theta_new)
             err = torch.sum(theta - theta_new)
