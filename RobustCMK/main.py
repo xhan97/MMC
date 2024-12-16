@@ -6,7 +6,6 @@ import torch
 from torch.optim import SGD, Adam
 from torch.utils.data import DataLoader
 
-from mkkm.kernel import rbf_kernel
 from model.loss import RCMKLoss, CMKLoss
 
 # from model.loss import sim_to_dist
@@ -41,11 +40,11 @@ def main(args):
         drop_last=drop_last,
     )
     model = LinearProjection(args.proj_dimension, d_view).to(args.device)
-    metric_func = rbf_kernel
-    params = {"gamma": 1 / args.proj_dimension}
-    rcmk_loss = RCMKLoss(
-        dict(type="rbf", gamma=1 / args.proj_dimension), device=args.device
-    )
+
+    # sample_index = [torch.randperm(args.batch_size * 2)[:16] for _ in range(100)]
+    params = {"type": "ik", "eta": 1, "psi": 16}
+    # params = {"gamma": 1 / args.proj_dimension}
+    rcmk_loss = RCMKLoss(device=args.device)
     cmk_loss = CMKLoss(
         dict(type="rbf", gamma=1 / args.proj_dimension), device=args.device
     )
@@ -74,7 +73,6 @@ def main(args):
             criterion,
             optimizer,
             epoch,
-            metric_func,
             num_class,
             args,
             **params,

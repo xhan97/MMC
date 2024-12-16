@@ -43,23 +43,31 @@ def load_outer_args():
     )
     parser.add_argument("-e", "--epoches", type=int, default=100, help="num of epoches")
     parser.add_argument(
-        "-b", "--base_dir", type=str, default="./data", help="source dir of dataset"
+        "-b",
+        "--base_dir",
+        type=str,
+        default="/home/xin/projects/MMC/RobustCMK/data",
+        help="source dir of dataset",
     )
     parser.add_argument(
         "-d",
         "--proj_dimension",
         type=int,
-        default=128,
+        default=64,
         help="project all views to same dimension",
     )
     parser.add_argument(
-        "-bt", "--batch_size", type=int, default=32, help="batch size of each iteration"
+        "-bt",
+        "--batch_size",
+        type=int,
+        default=32,
+        help="batch size of each iteration",
     )
     parser.add_argument(
         "-lr",
         "--learning_rate",
         type=float,
-        default=0.001,
+        default=0.1,
         help="learning rate of optimizer",
     )
     parser.add_argument(

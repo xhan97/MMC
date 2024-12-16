@@ -1,4 +1,8 @@
 import torch
+import numpy as np
+
+# seed = 2021
+# torch.manual_seed(seed)
 
 
 # pytorch version
@@ -22,3 +26,26 @@ def rbf_kernel(x, y=None, gamma=None):
     dist = torch.exp(-torch.norm(x[:, None] - y, p=2, dim=-1) ** 2 * gamma)
     # dist = torch.sum((x[:, None] - y) ** 2, dim=-1)
     return dist
+
+
+def iso_kernel(X, all_X, eta, psi):
+    map_tmp = None
+    if all_X is None:
+        all_X = X
+    # samples_index = [torch.randperm(len(all_X))[:psi] for _ in range(100)]
+    np.random.seed(42)
+    samples_index = [
+        np.random.choice(len(all_X), psi, replace=False) for _ in range(100)
+    ]
+    # print(samples_index)
+    for s_index in samples_index:
+        samples = all_X[s_index]
+        dist = torch.cdist(X, samples)
+        soft_dist = torch.exp(-eta * dist) / torch.sqrt(
+            torch.exp(-2 * eta * dist).sum(dim=1)
+        ).view(-1, 1)
+        if map_tmp is None:
+            map_tmp = soft_dist
+        else:
+            map_tmp = torch.hstack([map_tmp, soft_dist])
+    return torch.mm(map_tmp, map_tmp.T) / len(samples_index)

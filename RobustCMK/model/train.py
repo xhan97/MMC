@@ -5,19 +5,50 @@ import torch.nn.functional as F
 from mkkm.mkkm import mkkm
 from sklearn.cluster import k_means
 from utils.score import cluster_metric
+from model.kernel import KernelLayer
+from mkkm.kernel import rbf_kernel, iso_kernel
 
 
-def train(
-    data_loader,
-    model,
-    criterion,
-    optimizer,
-    epoch,
-    kernel_func,
-    num_class,
-    args,
-    **params
-):
+def kernel_func(features, all_features=None, **kernel_options):
+    # define Euclidean distance
+    def EuDist2(fea_a, fea_b):
+        return torch.cdist(fea_a, fea_b, p=2)
+
+    # compute kernels
+    if kernel_options["type"] == "rbf":
+        K = rbf_kernel(features, gamma=kernel_options["gamma"])
+    elif kernel_options["type"] == "Gaussian":
+        D = EuDist2(features, features)
+        K = torch.exp(-D / (2 * kernel_options["t"] ** 2))
+    elif kernel_options["type"] == "Linear":
+        K = torch.matmul(features, features.T)
+    elif kernel_options["type"] == "Polynomial":
+        K = torch.pow(
+            kernel_options["a"] * torch.matmul(features, features.T)
+            + kernel_options["b"],
+            kernel_options["d"],
+        )
+    elif kernel_options["type"] == "Sigmoid":
+        K = torch.tanh(
+            kernel_options["d"] * torch.matmul(features, features.T)
+            + kernel_options["c"]
+        )
+    elif kernel_options["type"] == "Cauchy":
+        D = EuDist2(features, features)
+        K = 1 / (D / kernel_options["sigma"] + 1)
+    elif kernel_options["type"] == "ik":
+        K = iso_kernel(
+            features,
+            all_features,
+            kernel_options["eta"],
+            kernel_options["psi"],
+        )
+    else:
+        raise NotImplementedError
+    return K
+
+
+def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **params):
     device = torch.device(args.device)
     loss_con = 0
     loss_clu = 0
@@ -46,6 +77,10 @@ def train(
         identity_matrix = torch.as_tensor(label_vec == label_vec.T, device=device)
         true_neg_mask = torch.where(identity_matrix, 0, 1)
         false_neg_mask = neg_mask - true_neg_mask
+
+        features = torch.cat(proj_feature, dim=0)
+
+        K = kernel_func(features, all_features=None, **params)
         (
             loss_con_batch,
             pos_avg_batch,
@@ -53,14 +88,13 @@ def train(
             true_neg_avg_batch,
             false_neg_avg_batch,
         ) = criterion(
-            proj_feature,
+            K,
             pos_mask,
             neg_mask,
             true_neg_mask,
             false_neg_mask,
             m=args.margin,
         )
-
         loss_con += loss_con_batch.item()  # 总的损失
         pos_avg += (pos_avg_batch - pos_avg) / (batch_idx + 1)
         neg_avg += (neg_avg_batch - neg_avg) / (batch_idx + 1)
@@ -69,7 +103,7 @@ def train(
 
         multi_kmatrix = []
         for i in range(num_view):
-            kmatrix = kernel_func(proj_feature[i], **params)
+            kmatrix = kernel_func(proj_feature[i], features, **params)
             multi_kmatrix.append(kmatrix)
         kernel = torch.stack(multi_kmatrix, dim=0).mean(0)
         val, vec = torch.linalg.eig(kernel.detach())
