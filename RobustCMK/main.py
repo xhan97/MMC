@@ -42,9 +42,9 @@ def main(args):
     model = LinearProjection(args.proj_dimension, d_view).to(args.device)
 
     # sample_index = [torch.randperm(args.batch_size * 2)[:16] for _ in range(100)]
-    params = {"type": "ik", "eta": 1, "psi": 16}
-    # params = {"gamma": 1 / args.proj_dimension}
-    rcmk_loss = RCMKLoss(device=args.device)
+    params = {"type": "IK", "eta": 1, "psi": 4}
+    # params = {"type": "rbf", "gamma": 1 / args.proj_dimension}
+    rcmk_loss = RCMKLoss(params, device=args.device)
     cmk_loss = CMKLoss(
         dict(type="rbf", gamma=1 / args.proj_dimension), device=args.device
     )

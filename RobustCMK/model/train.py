@@ -36,7 +36,7 @@ def kernel_func(features, all_features=None, **kernel_options):
     elif kernel_options["type"] == "Cauchy":
         D = EuDist2(features, features)
         K = 1 / (D / kernel_options["sigma"] + 1)
-    elif kernel_options["type"] == "ik":
+    elif kernel_options["type"] == "IK":
         K = iso_kernel(
             features,
             all_features,
@@ -80,7 +80,7 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
         features = torch.cat(proj_feature, dim=0)
 
-        K = kernel_func(features, all_features=None, **params)
+        # K = kernel_func(features, all_features=None, **params)
         (
             loss_con_batch,
             pos_avg_batch,
@@ -88,7 +88,7 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
             true_neg_avg_batch,
             false_neg_avg_batch,
         ) = criterion(
-            K,
+            features,
             pos_mask,
             neg_mask,
             true_neg_mask,
