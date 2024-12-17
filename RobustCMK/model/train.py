@@ -80,6 +80,11 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
         features = torch.cat(proj_feature, dim=0)
 
+        if features.isinf().any():
+            print(features)
+        if features.isnan().any():
+            print(features)
+
         # K = kernel_func(features, all_features=None, **params)
         (
             loss_con_batch,
@@ -103,6 +108,10 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
         multi_kmatrix = []
         for i in range(num_view):
+            if proj_feature[i].isinf().any():
+                print(proj_feature[i])
+            if proj_feature[i].isnan().any():
+                print(proj_feature[i])
             kmatrix = kernel_func(proj_feature[i], features, **params)
             multi_kmatrix.append(kmatrix)
         kernel = torch.stack(multi_kmatrix, dim=0).mean(0)

@@ -15,6 +15,8 @@ from utils.dataset.custom_dataset import MultiviewDataset
 from utils.common import load_outer_args, init_torch
 
 
+torch.autograd.set_detect_anomaly(True)
+
 def main(args):
 
     if not torch.cuda.is_available():
@@ -42,8 +44,8 @@ def main(args):
     model = LinearProjection(args.proj_dimension, d_view).to(args.device)
 
     # sample_index = [torch.randperm(args.batch_size * 2)[:16] for _ in range(100)]
-    params = {"type": "IK", "eta": 1, "psi": 4}
-    # params = {"type": "rbf", "gamma": 1 / args.proj_dimension}
+    params = {"type": "IK", "eta": 100, "psi": 8}
+    #params = {"type": "rbf", "gamma": 1 / args.proj_dimension}
     rcmk_loss = RCMKLoss(params, device=args.device)
     cmk_loss = CMKLoss(
         dict(type="rbf", gamma=1 / args.proj_dimension), device=args.device

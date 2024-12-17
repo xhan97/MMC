@@ -53,7 +53,7 @@ def load_outer_args():
         "-d",
         "--proj_dimension",
         type=int,
-        default=128,
+        default=64,
         help="project all views to same dimension",
     )
     parser.add_argument(
@@ -63,7 +63,7 @@ def load_outer_args():
         "-lr",
         "--learning_rate",
         type=float,
-        default=0.005,
+        default=0.001,
         help="learning rate of optimizer",
     )
     parser.add_argument(

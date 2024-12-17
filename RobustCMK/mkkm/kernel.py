@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import torch.nn.functional as F
 
 # seed = 2021
 # torch.manual_seed(seed)
@@ -40,12 +41,17 @@ def iso_kernel(X, all_X, eta, psi):
     # print(samples_index)
     for s_index in samples_index:
         samples = all_X[s_index]
-        dist = torch.cdist(X, samples)
-        soft_dist = torch.exp(-eta * dist) / torch.sqrt(
-            torch.exp(-2 * eta * dist).sum(dim=1)
-        ).view(-1, 1)
+        dist = -2*eta*torch.cdist(X, samples)
+        # dist -= torch.max(dist, dim=1)
+        # soft_dist = torch.sqrt(torch.exp(-dist) / torch.sum(dist, dim=1, keepdim=True))
+        soft_dist = torch.sqrt(torch.exp(F.log_softmax(dist, dim=1)))
+        #(torch.exp(eta * dist) / torch.sqrt( torch.exp(2 * eta * dist).sum(dim=1) ).view(-1, 1))
         if map_tmp is None:
             map_tmp = soft_dist
         else:
             map_tmp = torch.hstack([map_tmp, soft_dist])
+        if torch.mm(soft_dist, soft_dist.T).isinf().any():
+            print(soft_dist)
+        if torch.mm(soft_dist, soft_dist.T).isnan().any():
+            print(soft_dist)
     return torch.mm(map_tmp, map_tmp.T) / len(samples_index)
