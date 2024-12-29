@@ -59,7 +59,8 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
     acc, nmi, pur = 0, 0, 0
     for batch_idx, (feature, label) in enumerate(data_loader):
-
+        if batch_idx == 16 or batch_idx == 0:
+            print(batch_idx)
         num_view = len(feature)
         num_smp = len(feature[0])
         num_ins = num_view * num_smp

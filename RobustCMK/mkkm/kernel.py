@@ -28,24 +28,29 @@ def rbf_kernel(x, y=None, gamma=None):
     # dist = torch.sum((x[:, None] - y) ** 2, dim=-1)
     return dist
 
+def check_for_nan(tensor, label):
+    if torch.isnan(tensor).any():
+        print(f"{label} contains NaN values")
+
 
 def iso_kernel(X, all_X, eta, psi):
     map_tmp = None
     if all_X is None:
         all_X = X
-    # samples_index = [torch.randperm(len(all_X))[:psi] for _ in range(100)]
     np.random.seed(42)
     samples_index = [
         np.random.choice(len(all_X), psi, replace=False) for _ in range(100)
     ]
-    # print(samples_index)
     for s_index in samples_index:
         samples = all_X[s_index]
         dist = -2*eta*torch.cdist(X, samples)
-        # dist -= torch.max(dist, dim=1)
-        # soft_dist = torch.sqrt(torch.exp(-dist) / torch.sum(dist, dim=1, keepdim=True))
-        soft_dist = torch.sqrt(torch.exp(F.log_softmax(dist, dim=1)))
-        #(torch.exp(eta * dist) / torch.sqrt( torch.exp(2 * eta * dist).sum(dim=1) ).view(-1, 1))
+        log_soft_max_dist = torch.clamp(F.log_softmax(dist, dim=1), min=-20, max=20)
+        soft_max_dist = torch.exp(log_soft_max_dist)
+        # soft_max_dist = safe_softmax(dist)
+        check_for_nan(soft_max_dist,"soft_max_dist")
+        soft_dist = torch.sqrt(soft_max_dist)
+
+        check_for_nan(soft_dist,"soft_dist")
         if map_tmp is None:
             map_tmp = soft_dist
         else:
@@ -54,4 +59,7 @@ def iso_kernel(X, all_X, eta, psi):
             print(soft_dist)
         if torch.mm(soft_dist, soft_dist.T).isnan().any():
             print(soft_dist)
-    return torch.mm(map_tmp, map_tmp.T) / len(samples_index)
+    ik_similarity = torch.mm(map_tmp, map_tmp.T) / len(samples_index)
+    assert ik_similarity.shape == (X.shape[0], X.shape[0])
+    return ik_similarity
+

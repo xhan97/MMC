@@ -8,6 +8,7 @@ class LinearProjection(nn.Module):
         self.d_proj = d_proj
         self.d_view = d_view
         self.num_view = len(d_view)
+        self.b1 = nn.BatchNorm1d(d_proj)
         self.net_view = nn.ModuleList()
         for i in range(self.num_view):
             self.net_view.append(nn.Linear(d_view[i], d_proj))
@@ -23,5 +24,5 @@ class LinearProjection(nn.Module):
         for i in range(self.num_view):
             net = nets[i]
             tmp_feature = net(feature[i])
-            proj_feature.append(net(feature[i]))
+            proj_feature.append(self.b1(tmp_feature))
         return proj_feature

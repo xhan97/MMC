@@ -27,7 +27,7 @@ def load_mat(path, key_feature="data", key_label="labels"):
 def load_outer_args():
     parser = argparse.ArgumentParser(description="robust cmk")
     #  MNIST10 ALOI_100 animal
-    parser.add_argument("-seed", "--seed", type=int, default=16, help="random seed")
+    parser.add_argument("-seed", "--seed", type=int, default=42, help="random seed")
     parser.add_argument(
         "-ds", "--dataset", type=str, default="BBCSport", help="the multi-view dataset"
     )
@@ -53,7 +53,7 @@ def load_outer_args():
         "-d",
         "--proj_dimension",
         type=int,
-        default=64,
+        default=128,
         help="project all views to same dimension",
     )
     parser.add_argument(
@@ -63,7 +63,7 @@ def load_outer_args():
         "-lr",
         "--learning_rate",
         type=float,
-        default=0.001,
+        default=0.005,
         help="learning rate of optimizer",
     )
     parser.add_argument(
@@ -73,7 +73,7 @@ def load_outer_args():
         "-t",
         "--trade_off",
         type=float,
-        default=0.1,
+        default=0.5,
         help="balance between loss_con and loss_clu",
     )
     parser.add_argument(
