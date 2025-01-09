@@ -1,56 +1,12 @@
-import numpy as np
-import random
 import torch
 import torch.nn.functional as F
-from mkkm.mkkm import mkkm
 from sklearn.cluster import k_means
 from utils.score import cluster_metric
-from model.kernel import KernelLayer
-from mkkm.kernel import rbf_kernel, iso_kernel
-
-
-def kernel_func(features, all_features=None, **kernel_options):
-    # define Euclidean distance
-    def EuDist2(fea_a, fea_b):
-        return torch.cdist(fea_a, fea_b, p=2)
-
-    # compute kernels
-    if kernel_options["type"] == "rbf":
-        K = rbf_kernel(features, gamma=kernel_options["gamma"])
-    elif kernel_options["type"] == "Gaussian":
-        D = EuDist2(features, features)
-        K = torch.exp(-D / (2 * kernel_options["t"] ** 2))
-    elif kernel_options["type"] == "Linear":
-        K = torch.matmul(features, features.T)
-    elif kernel_options["type"] == "Polynomial":
-        K = torch.pow(
-            kernel_options["a"] * torch.matmul(features, features.T)
-            + kernel_options["b"],
-            kernel_options["d"],
-        )
-    elif kernel_options["type"] == "Sigmoid":
-        K = torch.tanh(
-            kernel_options["d"] * torch.matmul(features, features.T)
-            + kernel_options["c"]
-        )
-    elif kernel_options["type"] == "Cauchy":
-        D = EuDist2(features, features)
-        K = 1 / (D / kernel_options["sigma"] + 1)
-    elif kernel_options["type"] == "IK":
-        K = iso_kernel(
-            features,
-            all_features,
-            kernel_options["eta"],
-            kernel_options["psi"],
-        )
-    else:
-        raise NotImplementedError
-    return K
 
 
 def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **params):
     device = torch.device(args.device)
-    loss_con = 0
+    loss_all = 0
     loss_clu = 0
     pos_avg = 0
     neg_avg = 0
@@ -59,8 +15,6 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
     acc, nmi, pur = 0, 0, 0
     for batch_idx, (feature, label) in enumerate(data_loader):
-        if batch_idx == 16 or batch_idx == 0:
-            print(batch_idx)
         num_view = len(feature)
         num_smp = len(feature[0])
         num_ins = num_view * num_smp
@@ -81,14 +35,9 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
 
         features = torch.cat(proj_feature, dim=0)
 
-        if features.isinf().any():
-            print(features)
-        if features.isnan().any():
-            print(features)
-
-        # K = kernel_func(features, all_features=None, **params)
         (
-            loss_con_batch,
+            H,
+            loss_all_batch,
             pos_avg_batch,
             neg_avg_batch,
             true_neg_avg_batch,
@@ -101,43 +50,17 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
             false_neg_mask,
             m=args.margin,
         )
-        loss_con += loss_con_batch.item()  # 总的损失
+        loss_all += loss_all_batch.item()  # 总的损失
         pos_avg += (pos_avg_batch - pos_avg) / (batch_idx + 1)
         neg_avg += (neg_avg_batch - neg_avg) / (batch_idx + 1)
         true_neg_avg += (true_neg_avg_batch - true_neg_avg) / (batch_idx + 1)
         false_neg_avg += (false_neg_avg_batch - false_neg_avg) / (batch_idx + 1)
 
-        multi_kmatrix = []
-        for i in range(num_view):
-            if proj_feature[i].isinf().any():
-                print(proj_feature[i])
-            if proj_feature[i].isnan().any():
-                print(proj_feature[i])
-            kmatrix = kernel_func(proj_feature[i], features, **params)
-            multi_kmatrix.append(kmatrix)
-        kernel = torch.stack(multi_kmatrix, dim=0).mean(0)
-        val, vec = torch.linalg.eig(kernel.detach())
-        _, ind = torch.sort(torch.real(val.detach().cpu()), descending=True)
-        H = torch.real(vec[:, ind[:num_class]])
-
         # loss of extra downstream task
-        loss_clu_batch = (
-            torch.trace(kernel) - torch.trace(torch.linalg.multi_dot([H.T, kernel, H]))
-        ) / num_smp
 
-        # get normalized H for later validation
-        H = F.normalize(H).detach().cpu().numpy()
-        if epoch < args.epoches // 3:
-            loss_total_batch = loss_con_batch
-        else:
-            loss_total_batch = loss_con_batch + loss_clu_batch * args.trade_off
-        loss_clu += loss_clu_batch.item()
-        loss_con += loss_con_batch.item()
-
-        if epoch > 0:
-            optimizer.zero_grad()
-            loss_total_batch.backward()
-            optimizer.step()
+        optimizer.zero_grad()
+        loss_all.backward()
+        optimizer.step()
 
         # k_means
         centroid, y_pred, _ = k_means(H, num_class, n_init="auto")
@@ -150,7 +73,7 @@ def train(data_loader, model, criterion, optimizer, epoch, num_class, args, **pa
     if epoch == 0:
         args.margin = (pos_avg + neg_avg) / 2 * args.margin_rate
     return (
-        loss_con,
+        loss_all,
         loss_clu,
         pos_avg,
         neg_avg,

@@ -46,7 +46,7 @@ def load_outer_args():
         "-b",
         "--base_dir",
         type=str,
-        default="/home/xin/projects/MMC/RobustCMK/data",
+        default="/Users/apple/xhan/paper/research/multi_mode/Code/baselines/RobustCMK/data/",
         help="source dir of dataset",
     )
     parser.add_argument(
