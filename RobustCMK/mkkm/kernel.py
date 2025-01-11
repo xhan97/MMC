@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 import torch.nn.functional as F
+import math
 
 # seed = 2021
 # torch.manual_seed(seed)
@@ -41,16 +42,21 @@ def iso_kernel(X, all_X, eta, psi):
     samples_index = [
         np.random.choice(len(all_X), psi, replace=False) for _ in range(100)
     ]
-    for s_index in samples_index:
-        samples = all_X[s_index]
-        dist = -2 * eta * torch.cdist(X, samples)
-        log_soft_max_dist = torch.clamp(F.log_softmax(dist, dim=1), min=-20, max=20)
-        soft_max_dist = torch.exp(log_soft_max_dist)
-        soft_dist = torch.sqrt(soft_max_dist)
+    samples_index_set = np.concatenate(samples_index)
+    unique_samples_index, indices = np.unique(samples_index_set, return_inverse=True)
+    samples_index_inverse = np.split(indices, psi)
+    scaling_factor = math.sqrt(X.shape[1])
+    sim_unique_samples = torch.mm(all_X[unique_samples_index], X.T) / scaling_factor
+    sim_samples = torch.tensor(
+        [sim_unique_samples[index_inverse] for index_inverse in samples_index_inverse]
+    )
+    for s in sim_samples:
+        log_soft_max_sim = torch.clamp(F.log_softmax(s, dim=1), min=-20, max=20) / 2
+        soft_max_sim = torch.exp(log_soft_max_sim)
         if map_tmp is None:
-            map_tmp = soft_dist
+            map_tmp = soft_max_sim
         else:
-            map_tmp = torch.hstack([map_tmp, soft_dist])
-    ik_similarity = torch.mm(map_tmp, map_tmp.T) / len(samples_index)
+            map_tmp = torch.vstack([map_tmp, soft_max_sim])
+    ik_similarity = torch.mm(map_tmp.T, map_tmp) / len(samples_index)
     assert ik_similarity.shape == (X.shape[0], X.shape[0])
     return ik_similarity
