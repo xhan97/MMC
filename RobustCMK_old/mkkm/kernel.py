@@ -52,7 +52,6 @@ def iso_kernel(X, all_X=None, eta=1, psi=8, t=100):
     if all_X is None:
         all_X = X
 
-    np.random.seed(42)
     samples_index = np.array(
         [np.random.choice(len(all_X), psi, replace=False) for _ in range(t)]
     )

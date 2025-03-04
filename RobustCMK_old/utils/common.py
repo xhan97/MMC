@@ -43,7 +43,11 @@ def load_outer_args():
     )
     parser.add_argument("-e", "--epoches", type=int, default=100, help="num of epoches")
     parser.add_argument(
-        "-b", "--base_dir", type=str, default="./data", help="source dir of dataset"
+        "-b",
+        "--base_dir",
+        type=str,
+        default="/home/cluster/xinhan/projects/MMC/RobustCMK/data/",
+        help="source dir of dataset",
     )
     parser.add_argument(
         "-d",
@@ -59,7 +63,7 @@ def load_outer_args():
         "-lr",
         "--learning_rate",
         type=float,
-        default=0.001,
+        default=0.005,
         help="learning rate of optimizer",
     )
     parser.add_argument(
@@ -69,7 +73,7 @@ def load_outer_args():
         "-t",
         "--trade_off",
         type=float,
-        default=0.1,
+        default=0.5,
         help="balance between loss_con and loss_clu",
     )
     parser.add_argument(
