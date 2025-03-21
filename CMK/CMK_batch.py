@@ -19,7 +19,7 @@ from sklearn import metrics
 from scipy.optimize import linear_sum_assignment
 
 
-def read_mymat73(data_path, sparse=False):
+def read_mat(data_path, sparse=False):
     with hp.File(data_path, "r") as f:
         Y = f["Y"][()].T.astype(np.int32)
         Xr = f["X"][()].reshape((-1,)).tolist()
@@ -45,9 +45,9 @@ def load_data(args):
         gt = data["Y"].squeeze()
     except:
         try:
-            Xs, gt = read_mymat73(data_path)
+            Xs, gt = read_mat(data_path)
         except:
-            Xs, gt = read_mymat73(data_path, sparse=True)
+            Xs, gt = read_mat(data_path, sparse=True)
 
     num_class = np.unique(gt).shape[0]
     feat_dims = [x.shape[1] for x in Xs]
