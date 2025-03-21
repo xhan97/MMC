@@ -74,9 +74,7 @@ def iso_kernel(X, all_X=None, eta=1, psi=8, t=100):
 
         # Apply softmax and take square root for the feature map
         log_soft_max_sim = torch.clamp(
-            F.log_softmax(eta * batch_sim, dim=0) / 2,
-            min=-20,
-            max=20,
+            F.log_softmax(eta * batch_sim / 2, dim=0), min=-20, max=20
         )
         soft_max_sim = torch.exp(log_soft_max_sim)
 
@@ -90,7 +88,7 @@ def iso_kernel(X, all_X=None, eta=1, psi=8, t=100):
 
     # Stack feature maps and compute kernel matrix
     map_tmp = torch.vstack(feature_maps)
-    ik_similarity = torch.mm(map_tmp.T, map_tmp) / t
+    ik_similarity = torch.matmul(map_tmp.T, map_tmp) / t
 
     assert ik_similarity.shape == (X.shape[0], X.shape[0]), "Invalid kernel shape"
     return ik_similarity

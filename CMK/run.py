@@ -1,57 +1,68 @@
 from CMK import default_args, main
+import itertools
+import time
+from concurrent.futures import ProcessPoolExecutor
 
-data_names = ["BBC2", "bbcsport_2view", "CiteSeer", "Cora", "Movies"]
-normalizes = [True, False]
-dims = [4, 8, 16, 32, 64, 128, 256, 512]
-learning_rates = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100]
-epochs_set = [150, 300, 450]
+# Configuration parameters
+DATA_NAMES = ["BBC2", "bbcsport_2view", "CiteSeer", "Cora", "Movies"]
+NORMALIZES = [True, False]
+DIMS = [4, 8, 16, 32, 64, 128, 256, 512]
+LEARNING_RATES = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10, 100]
+EPOCHS_SET = [150, 300, 450]
 
-for id in range(len(data_names)):
-    for normalize in normalizes:
-        for dim in dims:
-            for lr in learning_rates:
-                for epochs in epochs_set:
+# Kernel configurations
+KERNEL_CONFIGS = {
+    "Gaussian": {"type": "Gaussian", "t": 1.0},
+    "Linear": {"type": "Linear"},
+    "Polynomial": {"type": "Polynomial", "a": 1.0, "b": 1.0, "d": 2.0},
+    "Sigmoid": {"type": "Sigmoid", "d": 2.0, "c": 0.0},
+    "Cauchy": {"type": "Cauchy", "sigma": 1.0},
+    "Isolation": {"type": "Isolation", "eta": 10.0, "psi": 8, "t": 200},
+}
 
-                    data_name = data_names[id]
-                    print(
-                        "# {}, norm_{}, dim_{}, lr_{}, epochs_{}".format(
-                            data_name, normalize, dim, lr, epochs
-                        )
-                    )
 
-                    # Gaussian
-                    print(" - Gaussian")
-                    args = default_args(data_name, normalize, dim, lr, epochs)
-                    args.kernel_options["type"] = "Gaussian"
-                    args.kernel_options["t"] = 1.0
-                    main(args)
+def run_experiment(params):
+    data_name, normalize, dim, lr, epochs, kernel_name = params
 
-                    # Linear
-                    print(" - Linear")
-                    args = default_args(data_name, normalize, dim, lr, epochs)
-                    args.kernel_options["type"] = "Linear"
-                    main(args)
+    print(
+        f"# {data_name}, norm_{normalize}, dim_{dim}, lr_{lr}, epochs_{epochs}, kernel_{kernel_name}"
+    )
 
-                    # Polynomial
-                    print(" - Polynomial")
-                    args = default_args(data_name, normalize, dim, lr, epochs)
-                    args.kernel_options["type"] = "Polynomial"
-                    args.kernel_options["a"] = 1.0
-                    args.kernel_options["b"] = 1.0
-                    args.kernel_options["d"] = 2.0
-                    main(args)
+    args = default_args(data_name, normalize, dim, lr, epochs)
+    for key, value in KERNEL_CONFIGS[kernel_name].items():
+        args.kernel_options[key] = value
 
-                    # Sigmoid
-                    print(" - Sigmoid")
-                    args = default_args(data_name, normalize, dim, lr, epochs)
-                    args.kernel_options["type"] = "Sigmoid"
-                    args.kernel_options["d"] = 2.0
-                    args.kernel_options["c"] = 0.0
-                    main(args)
+    start_time = time.time()
+    result = main(args)
+    elapsed_time = time.time() - start_time
 
-                    # Cauchy
-                    print(" - Cauchy")
-                    args = default_args(data_name, normalize, dim, lr, epochs)
-                    args.kernel_options["type"] = "Cauchy"
-                    args.kernel_options["sigma"] = 1.0
-                    main(args)
+    print(f"Completed {kernel_name} in {elapsed_time:.2f}s")
+    return result
+
+
+def main_parallel():
+    # Generate all parameter combinations
+    all_params = list(
+        itertools.product(
+            DATA_NAMES,
+            NORMALIZES,
+            DIMS,
+            LEARNING_RATES,
+            EPOCHS_SET,
+            KERNEL_CONFIGS.keys(),
+        )
+    )
+
+    print(f"Total experiments to run: {len(all_params)}")
+
+    # Uncomment to use parallel processing
+    # with ProcessPoolExecutor(max_workers=8) as executor:
+    #     results = list(executor.map(run_experiment, all_params))
+
+    # Sequential processing
+    for params in all_params:
+        run_experiment(params)
+
+
+if __name__ == "__main__":
+    main_parallel()

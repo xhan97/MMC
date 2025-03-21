@@ -40,7 +40,7 @@ def main(args):
         drop_last=drop_last,
     )
     model = LinearProjection(args.proj_dimension, d_view).to(args.device)
-    params = {"type": "IK", "eta": 30, "psi": 32}
+    params = {"type": "IK", "eta": 5, "psi": 8}
 
     # params = {"gamma": 1 / args.proj_dimension}
     rcmk_loss = RCMKLoss(params, device=args.device)
